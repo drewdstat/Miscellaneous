@@ -4,8 +4,7 @@ Miscellaneous helper functions I use to rapidly perform basic epidemiologic anal
 # Resmat_lm
 This is a complicated helper function I've piecemeal added to throughout the years to handle all sorts of repeated linear regression analyses.
 It outputs R and html (kable) tables of key regression output, a list of the model objects, and a coefficient forest plot. Supported regression types
-include linear regression (lm) and binomial GLMs (glm with binomial family and link "logit" for logistic regressions, "log" for binomial regressions, 
-or "probit" for probit regressions).
+include linear regression (lm) and binomial GLMs (glm with binomial family and link "logit" for logistic regressions or Firth's logistic regression using logistf, "log" for binomial regressions, or "probit" for probit regressions).
 
 Inputs:
 - prednames: A character vector of the column names of predictors of interest you'd like to evaluate in separate regressions. These column names can refer to

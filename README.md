@@ -8,25 +8,25 @@ include linear regression (lm) and binomial GLMs (glm with binomial family and l
 or "probit" for probit regressions).
 
 Inputs:
-prednames: A character vector of the column names of predictors of interest you'd like to evaluate in separate regressions. These column names can refer to
+- prednames: A character vector of the column names of predictors of interest you'd like to evaluate in separate regressions. These column names can refer to
   character, factor, or numeric columns in the data frame.
-outnames: A character vector of the column names of outcome variables you'd like to evaluate in separate regressions. These column names can refer to 
+- outnames: A character vector of the column names of outcome variables you'd like to evaluate in separate regressions. These column names can refer to 
   character, factor, or numeric columns in the data frame. For each outnames, lm() linear regressions will be run if the referenced column is numeric, or a
   glm() GLM with a binomial() family will be run with the link function specified in the input "binomlink". Does not yet support characters or factors with 
   >2 unique values (i.e., it can only accomodate continous or binary outcome variables).
-covnames: Either a character vector of column names for all the covariates you'd like to include in each regression or a list of character vectors equal in length
+- covnames: Either a character vector of column names for all the covariates you'd like to include in each regression or a list of character vectors equal in length
   to the length of the unique combination of prednames and outnames. Defaults to NULL, meaning no covariates are included. This can be a list in order to control for
   separate covariates for each unique combination of prednames and outnames. These can include 'ns' natural spline terms as defined by the 'splines' package.
-Data: A data frame object of class "data.frame".
-logout: If TRUE, this will log transform each outcome variable (log base will be "logbaseout") prior to running the regression and then return both the raw
+- Data: A data frame object of class "data.frame".
+- logout: If TRUE, this will log transform each outcome variable (log base will be "logbaseout") prior to running the regression and then return both the raw
   coefficients as well as converted coefficients to percent changes using the formula percent change = (exp(raw coefficient)-1) x 100. Can be either a single
   value or a logical vector of length equal to the length of outnames. Defaults to FALSE.
-logpred: If TRUE, this will log transform each predictor variable (log base will be "logbasepred") prior to running the regression and then return the raw
+- logpred: If TRUE, this will log transform each predictor variable (log base will be "logbasepred") prior to running the regression and then return the raw
   coefficients. Can be either a single value or a logical vector of length equal to the length of prednames. Defaults to FALSE.
-logbasepred: The base for the log transformation of one or more of the predictor variables. Defaults to 10.
-logbaseout: The base for the log transformation of the outcome variables. Defaults to exp(1) (i.e., natural log transformation).
-Outtitle: Defines the title used for the column of outcome variables in the table and on the plot. Defaults to "Outcome".
-Predtitle: Defines the title used for the column of predictor variables in the table and on the plot. Defaults to "Exposure".
+- logbasepred: The base for the log transformation of one or more of the predictor variables. Defaults to 10.
+- logbaseout: The base for the log transformation of the outcome variables. Defaults to exp(1) (i.e., natural log transformation).
+- Outtitle: Defines the title used for the column of outcome variables in the table and on the plot. Defaults to "Outcome".
+- Predtitle: Defines the title used for the column of predictor variables in the table and on the plot. Defaults to "Exposure".
 MyMult: The table will output raw and transformed coefficients and CIs. This multiplier is an optional scalar to multiply the raw coefficients for an estimate
   of the coefficient for something other than a 1-unit increase. Defaults to 1, and can be either a number or the character "IQR", in which case the
   raw coefficient will be multiplied by the IQR of the predictor variable.

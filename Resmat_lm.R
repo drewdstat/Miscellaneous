@@ -1,6 +1,6 @@
 Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
                     logbasepred=10,logbaseout=exp(1),Outtitle="Outcome",
-                    Predtitle="Exposure",MyMult=1,ixterm=NULL,Firth=F,binomlink="logit",
+                    Predtitle="Exposure",MyMult=1,ixterm=NULL,Firth=F,binomlink="logit",binfunc=binomial,
                     robust=T,HCtype="HC0",predspline=F,predsplinedf=3,plotOR=F,plotPercChange=T,LOOCV=F,
                     facetcol=NULL,covix=NULL,ixpred=T,extradiag=T,leverage.test=F,leverage.cutoff=0.2,
                     leverage.meancutoff=NULL,post.power=F,effect.size=0.5,nsim=1E3,
@@ -231,6 +231,13 @@ Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
         }
       }
       if(length(unique(Data[which(!is.na(Data[,outnames[i]])),outnames[i]]))==2){
+        if(binfunc(binomlink)$family=="poisson"){
+          if(is.character(Data[,outnames[i]])) Data[,outnames[i]]<-as.factor(Data[,outnames[i]])
+          if(is.factor(Data[,outnames[i]])){
+            levels(Data[,outnames[i]])<-c("0","1")
+            Data[,outnames[i]]<-as.numeric(as.character(Data[,outnames[i]]))
+          } 
+        }
         if(Firth==T){
           lm1<-logistf(form1,data=Data,family=binomial(link=binomlink),na.action=na.exclude)
           if(leverage.test==T){
@@ -247,10 +254,10 @@ Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
                                     micevars[mip]]<-
                   micedata$imp[[micevars[mip]]][,mim]
               }; rm(mip)
-              lm1[[mim]]<-glm(form1,data=tempdatalist[[mim]],family=binomial(link=binomlink),na.action=na.exclude)
+              lm1[[mim]]<-glm(form1,data=tempdatalist[[mim]],family=binfunc(link=binomlink),na.action=na.exclude)
             }; rm(mim)
           } else {
-            lm1<-glm(form1,data=Data,family=binomial(link=binomlink),na.action=na.exclude)
+            lm1<-glm(form1,data=Data,family=binfunc(link=binomlink),na.action=na.exclude)
           }
           if(leverage.test==T){
             if(mice){
@@ -262,7 +269,7 @@ Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
                   threshold<-mean(cooks,na.rm=T)*leverage.meancutoff
                 } else {threshold<-mean(cooks,na.rm=T)*4}
                 lm1<-glm(form1,data=Data[-c(as.numeric(names(cooks[which(cooks>threshold)]))),],
-                         family=binomial(link=binomlink),na.action=na.exclude)
+                         family=binfunc(link=binomlink),na.action=na.exclude)
               }
             } else {
               cooks<-cooks.distance(lm1)
@@ -272,7 +279,7 @@ Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
                 threshold<-mean(cooks,na.rm=T)*leverage.meancutoff
               } else {threshold<-mean(cooks,na.rm=T)*4}
               lm1<-glm(form1,data=Data[-c(as.numeric(names(cooks[which(cooks>threshold)]))),],
-                       family=binomial(link=binomlink),na.action=na.exclude)
+                       family=binfunc(link=binomlink),na.action=na.exclude)
             }
           }
           if(robust==T){
@@ -327,6 +334,7 @@ Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
           }
         }
         if(robust==T){
+          print(summary(lm1)) #to remove
           if(mice){
             warning("Unclear how to do robust SEs with MICE, so ignoring 'robust' command")
           } else {
@@ -378,7 +386,7 @@ Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
                                       micevars[mip]]<-micedata$imp[[micevars[mip]]][,mim]
                 }; rm(mip)
                 if(any(class(lm1[[1]])=="glm")){
-                  newlm1[[mim]]<-glm(form1,data=tempdatalist[[mim]],family=binomial(link=binomlink),
+                  newlm1[[mim]]<-glm(form1,data=tempdatalist[[mim]],family=binfunc(link=binomlink),
                                      na.action=na.exclude)
                 } else {
                   newlm1[[mim]]<-lm(form1,data=tempdatalist[[mim]],na.action=na.exclude)
@@ -565,7 +573,7 @@ Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
                                          c(2:(length(levels(newData[,ixterm]))),1)])
               if(any(class(lm1)=="glm")){
                 newlm1<-glm(form1,data=newData,
-                            family=binomial(link=binomlink),na.action=na.exclude)
+                            family=binfunc(link=binomlink),na.action=na.exclude)
               } else {
                 newlm1<-lm(form1,data=newData,na.action=na.exclude)
               }
@@ -667,7 +675,7 @@ Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
                                        levels=levels(newData[,ixterm])[
                                          c(2:(length(levels(newData[,ixterm]))),1)])
               if(any(class(lm1)=="glm")){
-                newlm1<-glm(form1,data=newData,family=binomial(link=binomlink),na.action=na.exclude)
+                newlm1<-glm(form1,data=newData,family=binfunc(link=binomlink),na.action=na.exclude)
               } else {
                 newlm1<-lm(form1,data=newData,na.action=na.exclude)
               }
@@ -850,7 +858,7 @@ Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
         } else if(any(class(lm1)=="glm")){
           t1<-train(formula(paste0("factor(",outexpr,")~",as.character(form1)[3])),ccDat,
                     trControl = trainControl(method="repeatedcv",number=10,repeats=50),
-                    method="glm",family=binomial(link=binomlink))
+                    method="glm",family=binfunc(link=binomlink))
           Resultsmat[rownum,11]<-t1$results$Accuracy
         } else {
           Resultsmat[rownum,11]<-NA
@@ -885,10 +893,10 @@ Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
           # if(any(grepl("(",names(auxDat),fixed=T))){names(auxDat)<-gsub(".*\\(|\\,.*|\\).*","",names(auxDat))}
           # print(names(auxDat))
           # print(form1)
-          altmod<-glm(form1,data=ccDat,family=lmlist[[lmnum]]$family)
+          altmod<-glm(form1,data=lmlist[[lmnum]]$model,family=lmlist[[lmnum]]$family)
           simout<-DHARMa::simulateResiduals(altmod)
           quanttest<-DHARMa::testQuantiles(simout,plot=F)
-          outliertest<-DHARMa::testOutliers(simout,plot=F)
+          outliertest<-DHARMa::testOutliers(simout,plot=F,type='bootstrap')
           uniftest<-DHARMa::testUniformity(simout,plot=F)
           disptest<-DHARMa::testDispersion(simout,plot=F)
           Extramat[rownum,"Heterosk.p"]<-quanttest$p.value

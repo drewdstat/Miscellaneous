@@ -81,3 +81,50 @@ Outputs:
   odds ratios or percent changes, or some other multiplication specified by the user.
 - GGplot: A forest ggplot of all predictor of interest coefficients and CIs. 
 - LMlist: A list of all the lm, glm, or logistf objects run for each unique combination of predictor and outcome variable names (i.e., prednames and outnames).
+
+# InteractionCoefPlot
+This produces a plot of how the coefficient between one variable in a bivariate continuous interaction and the outcome changes over levels of the other continuous variable. This is a useful visualization of bivariate interactions between two continuous variables. 
+
+Inputs:
+- model: model of class lm or glm
+- data: data frame used to generate model
+- pred: column name of the predictor of interest
+- ixterm: column name of the interacting variable
+- multiplier: multiplier for the coefficients of interest (e.g., an IQR of the predictor of interest), defaults to 1
+- coeftransform: optional transformation function for the coefficients (e.g., tenfoldperc if the predictor of interest is on a log10 scale where `tenfoldperc<-function(x) ((10^x)-1)*100)`
+- predname: optional new name for pred
+- ixname: optional new name for ixterm
+- outname: optional new name for the outcome variable
+- title: optional plot title
+- fillcolor: color for the shading of the 95% CI region
+- autotitle: option to automatically generate a title, defaults to FALSE
+- addpvallab: option to add a label showing the interaction term p-value, defaults to FALSE
+- labsize: label text size if addpvallab is TRUE
+- lengthout: number of levels of ixterm generated with the length.out argument for the seq() function, defaults to 50
+- shadebysig: option to shade the CI region areas that don't overlap the null a darker tint of fillcolor, defaults to FALSE
+- otherix: option to generate both plots, one in which pred and ixterm are flipped; defaults to FALSE
+- robust: option to use HC0 robust sandwich errors for the CIs, defaults to TRUE; should be set to 
+-  FALSE if the model is a logistic glm or TRUE if model is a robust Poisson model for RR estimation
+- logistic: option for if model is a logistic glm, defaults to FALSE; this option sets the null line to 1, exponentiates all the coefficients to bring them to an OR scale, and changes the y label to "OR" instead of "Coefficient"
+
+Outputs:
+- MainGGplot: the interaction plot
+- OtherGGplot: the other interaction plot if otherix=TRUE
+- MainMatrix: the matrix of values used to generate the main plot
+- OtherMatrix: the matrix of values used to generate the other plot if otherix=TRUE
+
+Plot axis labels, fonts, etc. can be changed with standard ggplot options. For example, if the model is a robust Poisson GLM, you can set logistic=TRUE when running this function and saving it into an example object plotlist and then change the "OR" label to "RR" by running `plotlist$MainGGplot + ylab("Main Variable RR")` or something similar.
+
+Example:
+```
+set.seed(1)
+exdat<-as.data.frame(mvtnorm::rmvnorm(500,mean=rep(0,5)))
+names(exdat)<-paste0("X",1:ncol(exdat))
+exdat$X1X2<-exdat$X1*exdat$X2
+exdat$yhat<- c(-1 + as.matrix(exdat) %*% c(0.5,1.5,0,-2,2,1))
+set.seed(2)
+exdat$y<-exdat$yhat + rnorm(500,0,5)
+exlm<-lm(y~X1*X2+X3+X4+X5,exdat)
+explot<-InteractionCoefPlot(exlm,exdat,"X1","X2",addpvallab=T,shadebysig=T,robust=F,otherix=T)
+cowplot::plot_grid(explot$MainGGplot, explot$OtherGGplot, ncol=1)
+```

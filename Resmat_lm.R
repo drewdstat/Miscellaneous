@@ -1,8 +1,8 @@
 Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
                     logbasepred=10,logbaseout=exp(1),Outtitle="Outcome",
                     Predtitle="Exposure",MyMult=1,ixterm=NULL,Firth=F,binomlink="logit",binfunc=binomial,
-                    robust=T,HCtype="HC0",predspline=F,predsplinedf=3,plotOR=F,plotPercChange=T,LOOCV=F,
-                    facetcol=NULL,covix=NULL,ixpred=T,extradiag=T,leverage.test=F,leverage.cutoff=0.2,
+                    robust=T,robustdf=F,HCtype="HC0",predspline=F,predsplinedf=3,plotOR=F,plotPercChange=T,
+                    LOOCV=F,facetcol=NULL,covix=NULL,ixpred=T,extradiag=T,leverage.test=F,leverage.cutoff=0.2,
                     leverage.meancutoff=NULL,post.power=F,effect.size=0.5,nsim=1E3,
                     mice=F,micevars=NULL,miceiter=10){
   library(caret)
@@ -13,11 +13,11 @@ Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
   library(sandwich)
   library(splines)
   library(emmeans)
-  robustse <- function(x, HCtype="HC0") {
+  robustse <- function(x, HCtype="HC0",usedf=robustdf) {
     suppressMessages(suppressWarnings(library(lmtest)))
     suppressMessages(suppressWarnings(library(sandwich)))
     mod1 <- coeftest(x, vcov = function(x) vcovHC(x,type=HCtype))
-    if(any(class(x)=="glm")){
+    if(!usedf){
       cis<-coefci(x, vcov=function(x) vcovHC(x,type=HCtype))
     } else {
       cis<-coefci(x, vcov = function(x) vcovHC(x,type=HCtype),
@@ -334,7 +334,6 @@ Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
           }
         }
         if(robust==T){
-          print(summary(lm1)) #to remove
           if(mice){
             warning("Unclear how to do robust SEs with MICE, so ignoring 'robust' command")
           } else {
@@ -616,7 +615,7 @@ Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
               dimnames(summary(lm1)$coef)[[1]][c(2:3,grep(paste0(prednames[j],":"),
                                                           dimnames(robustcoef)[[1]]))]
           }
-        } else {
+        } else { #if robust==F
           if(class(Data[,ixterm])=="factor"){
             comb1<-combn(levels(Data[,ixterm]),2)
             Resultsmat[rownum,12]<-c(
@@ -630,10 +629,8 @@ Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
               lm1$coefficients[c(3:(2+(nixlvl-1)))]
             betalist[(2*nixlvl):
                        ((2*nixlvl)+((nixlvl)-2))]<-
-              lm1$coefficients[c( #-1*
-                (length(lm1$coefficients)-(nixlvl-2)):
-                  length(lm1$coefficients)
-              )]
+              lm1$coefficients[grep(paste0(prednames[j],":"),names(lm1$coef))]
+            # [c((length(lm1$coefficients)-(nixlvl-2)):length(lm1$coefficients))]
             
             selist<-rep(NA,ixtermlength)
             selist[1]<-summary(lm1)$coef[2,2]
@@ -641,22 +638,17 @@ Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
               summary(lm1)$coef[c(3:(2+(nixlvl-1))),2]
             selist[(2*nixlvl):
                      ((2*nixlvl)+((nixlvl)-2))]<-
-              summary(lm1)$coef[c(
-                (length(lm1$coefficients)-(nixlvl-2)):
-                  length(lm1$coefficients)
-              ),2]
+              summary(lm1)$coef[grep(paste0(prednames[j],":"),names(lm1$coef)),2]
             
             cilist<-matrix(NA,ixtermlength,2)
-            lm1.ci<-suppressMessages(confint(lm1))
-            cilist[1,]<-lm1.ci[2,]
+            lm1.ci<-suppressMessages(confint(lm1,names(lm1$coef)[c(
+              2,c(3:(2+(nixlvl-1))),grep(paste0(prednames[j],":"),names(lm1$coef)))]))
+            cilist[1,]<-lm1.ci[1,]
             cilist[c(1+nixlvl:((2*nixlvl)-2)),]<-
-              lm1.ci[c(3:(2+(nixlvl-1))),]
+              lm1.ci[c(2:(1+(nixlvl-1))),]
             cilist[c((2*nixlvl):
                        ((2*nixlvl)+((nixlvl)-2))),]<-
-              lm1.ci[c(
-                (length(lm1$coefficients)-(nixlvl-2)):
-                  length(lm1$coefficients)
-              ),]
+              lm1.ci[grep(paste0(prednames[j],":"),rownames(lm1.ci)),]
             
             pvallist<-rep(NA,ixtermlength)
             pvallist[1]<-summary(lm1)$coef[2,4]
@@ -664,10 +656,7 @@ Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
               summary(lm1)$coef[c(3:(2+(nixlvl-1))),4]
             pvallist[(2*nixlvl):
                      ((2*nixlvl)+((nixlvl)-2))]<-
-              summary(lm1)$coef[c(
-                (length(lm1$coefficients)-(nixlvl-2)):
-                  length(lm1$coefficients)
-              ),4]
+              summary(lm1)$coef[grep(paste0(prednames[j],":"),names(lm1$coef)),4]
             
             newData<-Data
             for(rp in 1:(nixlvl-1)){
@@ -683,21 +672,21 @@ Resmat_lm<-function(prednames,outnames,covnames=NULL,Data,logout=F,logpred=F,
               betalist[1+rp]<-newlm1$coefficients[2]
               selist[1+rp]<-summary(newlm1)$coef[2,2]
               pvallist[1+rp]<-summary(newlm1)$coef[2,4]
-              cilist[1+rp,]<-suppressMessages(confint(newlm1))[2,]
+              cilist[1+rp,]<-suppressMessages(confint(newlm1,2:3))[1,]
               
               nix2take<-(nixlvl-1)-rp
               if(nix2take>0){
-                newtakerows<-c((length(lm1$coefficients)-nixlvl+2):
-                                 (length(lm1$coefficients)-(nixlvl-1)+nix2take))
+                # newtakerows<-c((length(lm1$coefficients)-nixlvl+2):
+                #                  (length(lm1$coefficients)-(nixlvl-1)+nix2take))
                 newfillrows<-c(
                   (((3*nixlvl)-1)+((nix2take+1)*(rp-1))):
                     ((((3*nixlvl)-1)+((nix2take+1)*(rp-1)))+(nix2take-1))
                 )
                 
-                betalist[newfillrows]<- newlm1$coefficients[newtakerows]
-                selist[newfillrows]<-summary(newlm1)$coef[newtakerows,2]
-                pvallist[newfillrows]<-summary(newlm1)$coef[newtakerows,4]
-                cilist[newfillrows,]<-suppressMessages(confint(newlm1))[newtakerows,]
+                betalist[newfillrows]<- newlm1$coefficients[grep(paste0(prednames[j],":"),names(newlm1$coef))]#newtakerows
+                selist[newfillrows]<-summary(newlm1)$coef[grep(paste0(prednames[j],":"),names(newlm1$coef)),2]
+                pvallist[newfillrows]<-summary(newlm1)$coef[grep(paste0(prednames[j],":"),names(newlm1$coef)),4]
+                cilist[newfillrows,]<-suppressMessages(confint(newlm1),grep(paste0(prednames[j],":"),names(newlm1$coef)))
               }
             }
           } else {
